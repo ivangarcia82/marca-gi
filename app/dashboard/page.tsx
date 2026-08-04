@@ -63,7 +63,7 @@ export default async function DashboardPage() {
           </div>
           <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all"
+              className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-600 transition-all"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -133,12 +133,12 @@ export default async function DashboardPage() {
                           <li key={d.id}>
                             <a
                               href={d.href}
-                              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50/50"
+                              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:border-brand-300 hover:bg-brand-50/50"
                             >
                               <svg
                                 viewBox="0 0 24 24"
                                 fill="none"
-                                className="h-4 w-4 shrink-0 text-indigo-500"
+                                className="h-4 w-4 shrink-0 text-brand-500"
                                 aria-hidden="true"
                               >
                                 <path
@@ -175,7 +175,7 @@ export default async function DashboardPage() {
                             href={`/api/files/evidencia/${ev.id}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="font-medium text-indigo-600 hover:underline"
+                            className="font-medium text-brand-600 hover:underline"
                           >
                             Ver mi evidencia actual
                           </a>

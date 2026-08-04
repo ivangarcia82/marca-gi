@@ -11,13 +11,13 @@ function StatCard({
   label: string;
   value: string | number;
   hint?: string;
-  tone?: "slate" | "amber" | "emerald" | "indigo";
+  tone?: "slate" | "amber" | "emerald" | "brand";
 }) {
   const tones: Record<string, string> = {
     slate: "text-slate-900",
     amber: "text-amber-600",
     emerald: "text-emerald-600",
-    indigo: "text-indigo-600",
+    brand: "text-brand-600",
   };
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -56,7 +56,7 @@ export default async function AdminResumenPage() {
       </p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Empleados activos" value={empleadosActivos} tone="indigo" />
+        <StatCard label="Empleados activos" value={empleadosActivos} tone="brand" />
         <StatCard
           label="Evidencias por revisar"
           value={pendientes}
@@ -76,7 +76,7 @@ export default async function AdminResumenPage() {
           <h2 className="font-semibold text-slate-900">Últimas por revisar</h2>
           <Link
             href="/admin/revision"
-            className="text-sm font-medium text-indigo-600 hover:underline"
+            className="text-sm font-medium text-brand-600 hover:underline"
           >
             Ver todas
           </Link>
@@ -102,7 +102,7 @@ export default async function AdminResumenPage() {
                 </div>
                 <Link
                   href="/admin/revision"
-                  className="shrink-0 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
+                  className="shrink-0 rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
                 >
                   Revisar
                 </Link>

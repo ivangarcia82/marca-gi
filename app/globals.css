@@ -1,17 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --brand: #4f46e5;
+  --background: #f6f7f8;
+  --foreground: #2e3033;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-brand: var(--brand);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Paleta de marca Generando Ideas — naranja #ff8300 + carbón #2e3033 */
+  --color-brand-50: #fff5ea;
+  --color-brand-100: #ffe8d1;
+  --color-brand-200: #ffcea3;
+  --color-brand-300: #ffb073;
+  --color-brand-400: #ff9640;
+  --color-brand-500: #ff8a1f;
+  --color-brand-600: #ff8300;
+  --color-brand-700: #d96f00;
+  --color-brand-800: #b85c00;
+  --color-brand-900: #8f4700;
 }
 
 html,

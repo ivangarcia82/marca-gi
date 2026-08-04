@@ -3,7 +3,7 @@ import { LoginForm } from "./LoginForm";
 
 export default function LoginPage() {
   return (
-    <main className="grid min-h-dvh place-items-center bg-gradient-to-b from-slate-50 to-indigo-50 px-4 py-10">
+    <main className="grid min-h-dvh place-items-center bg-gradient-to-b from-slate-50 to-brand-50 px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex justify-center">
           <Logo />

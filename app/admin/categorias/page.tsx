@@ -67,7 +67,7 @@ export default async function CategoriasPage() {
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
                       cat.requiereEvidencia
-                        ? "bg-indigo-100 text-indigo-700"
+                        ? "bg-brand-100 text-brand-700"
                         : "bg-slate-100 text-slate-500"
                     }`}
                   >
@@ -132,8 +132,8 @@ export default async function CategoriasPage() {
               </div>
 
               {/* Recursos compartidos (para todos) */}
-              <details className="mt-4 rounded-lg bg-indigo-50/50 p-3">
-                <summary className="cursor-pointer text-sm font-medium text-indigo-700">
+              <details className="mt-4 rounded-lg bg-brand-50/50 p-3">
+                <summary className="cursor-pointer text-sm font-medium text-brand-700">
                   Recursos compartidos ({cat._count.recursos})
                 </summary>
                 <div className="mt-3 space-y-3">
@@ -146,7 +146,7 @@ export default async function CategoriasPage() {
                         >
                           <a
                             href={`/api/files/recurso/${r.id}?download=1`}
-                            className="min-w-0 flex-1 truncate text-slate-700 hover:text-indigo-600"
+                            className="min-w-0 flex-1 truncate text-slate-700 hover:text-brand-600"
                           >
                             {r.nombre}
                           </a>

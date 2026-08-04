@@ -63,7 +63,7 @@ export default async function EmpleadosPage() {
                     href={`/admin/empleados/${emp.id}`}
                     className="flex items-center gap-4 px-5 py-4 transition hover:bg-slate-50"
                   >
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
                       {emp.nombre.slice(0, 1).toUpperCase()}
                     </div>
 

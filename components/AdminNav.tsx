@@ -25,7 +25,7 @@ export function AdminNav() {
             href={link.href}
             className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition ${
               active
-                ? "border-indigo-600 text-indigo-700"
+                ? "border-brand-600 text-brand-700"
                 : "border-transparent text-slate-500 hover:text-slate-800"
             }`}
           >

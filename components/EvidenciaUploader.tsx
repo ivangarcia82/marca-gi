@@ -23,7 +23,7 @@ export function EvidenciaUploader({
     <form action={formAction} className="space-y-2">
       <input type="hidden" name="categoriaId" value={categoriaId} />
 
-      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 transition hover:border-indigo-400 hover:bg-indigo-50/40">
+      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 transition hover:border-brand-400 hover:bg-brand-50/40">
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -64,7 +64,7 @@ export function EvidenciaUploader({
       <button
         type="submit"
         disabled={pending || !nombreArchivo}
-        className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending
           ? "Enviando…"
