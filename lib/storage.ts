@@ -59,12 +59,12 @@ export async function saveFile(
   if (useBlob) {
     const { put } = await import("@vercel/blob");
     const blob = await put(`${prefix}/${name}`, buffer, {
-      access: "public",
+      access: "private",
       addRandomSuffix: true,
       contentType: mimeType,
       token: blobToken,
     });
-    // La URL es no adivinable y nunca se expone al cliente directamente.
+    // Blob privado: solo accesible con token; se sirve por la ruta autenticada.
     return blob.url;
   }
 
@@ -97,9 +97,9 @@ export async function readFile(key: string): Promise<Buffer | null> {
 export async function readStream(key: string): Promise<ReadableStream | null> {
   try {
     if (key.startsWith("http")) {
-      const res = await fetch(key);
-      if (!res.ok || !res.body) return null;
-      return res.body;
+      const { get } = await import("@vercel/blob");
+      const res = await get(key, { access: "private", token: blobToken });
+      return (res?.stream as ReadableStream) ?? null;
     }
     const filePath = path.join(STORAGE_DIR, key);
     await fs.access(filePath);
