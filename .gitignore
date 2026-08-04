@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prisma / base de datos local
+/prisma/dev.db
+/prisma/dev.db-journal
+*.db
+
+# almacenamiento local de archivos (dev)
+/.storage
+
+# material fuente de marca (NO va al repo: pesado y ya cargado en la app)
+/BrandingPlataforma
+
+# datos generados con información personal de empleados (correos/nombres)
+/scripts/carga_plan.json
+/scripts/reporte_fotos.json

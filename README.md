@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Plataforma de Gestión de Marca — Generando Ideas
 
-## Getting Started
+Sistema web para gestionar el uso correcto de la marca por parte de los empleados.
+Los empleados descargan sus archivos de marca (firma, fondos, etc.) y suben evidencias
+(capturas) de que los usan correctamente. Un administrador revisa y aprueba o rechaza
+cada evidencia.
 
-First, run the development server:
+## Funcionalidades
+
+- **Roles**: Administrador y Empleado, con rutas protegidas.
+- **Empleado**: descarga sus archivos de marca, sube capturas de evidencia y ve el estado
+  (Pendiente / Aprobada / Rechazada) con barra de cumplimiento.
+- **Administrador**: da de alta empleados, gestiona categorías (crear, editar, reordenar,
+  activar/desactivar, eliminar), sube archivos por empleado o los asigna a varios de una
+  vez, y aprueba/rechaza evidencias desde una bandeja de revisión.
+- **Archivos privados**: capturas y assets se sirven solo al dueño o al administrador.
+
+## Requisitos
+
+- Node.js 20+ (probado con Node 22)
+
+## Puesta en marcha (local)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install          # instala dependencias
+npm run setup        # crea la base de datos SQLite y siembra admin + categorías
+npm run dev          # arranca en http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Credenciales del administrador inicial
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Definidas en `.env` (cámbialas antes de usar en serio):
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Correo:** `admin@generandoideas.com`
+- **Contraseña:** `Admin1234`
 
-## Learn More
+El administrador crea a los empleados desde **Empleados → Nuevo empleado** y les entrega su
+contraseña temporal.
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Script | Descripción |
+| --- | --- |
+| `npm run dev` | Servidor de desarrollo |
+| `npm run build` | Build de producción |
+| `npm run setup` | `db:push` + `db:seed` (base + datos iniciales) |
+| `npm run db:seed` | Crea admin y categorías iniciales |
+| `npm run db:studio` | Explorador visual de la base (Prisma Studio) |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Variables de entorno (`.env`)
 
-## Deploy on Vercel
+```
+DATABASE_URL="file:./dev.db"     # SQLite en dev
+AUTH_SECRET="..."                # secreto de sesión (generado)
+AUTH_TRUST_HOST=true
+ADMIN_EMAIL="admin@generandoideas.com"
+ADMIN_PASSWORD="Admin1234"
+ADMIN_NOMBRE="Administrador"
+# En producción con Vercel Blob:
+# BLOB_READ_WRITE_TOKEN="..."    # activa el almacenamiento en la nube
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Arquitectura
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS 4**
+- **Prisma 6** sobre SQLite (dev). Modelo en `prisma/schema.prisma`.
+- **Auth.js v5 (Credentials)** con sesión JWT. Config en `auth.ts` / `auth.config.ts`,
+  protección de rutas en `middleware.ts`.
+- **Almacenamiento** abstracto en `lib/storage.ts`: disco local en dev, Vercel Blob en
+  prod. Los archivos se sirven por la ruta autenticada `app/api/files/[tipo]/[id]`.
+- **Mutaciones** vía Server Actions (`app/**/actions.ts`).
+
+## Despliegue en Vercel (producción)
+
+1. **Base de datos Postgres** (Neon u otra del Marketplace de Vercel):
+   - En `prisma/schema.prisma`, cambia `provider = "sqlite"` por `provider = "postgresql"`.
+   - Define `DATABASE_URL` con la cadena de Postgres.
+   - Ejecuta `npx prisma db push` y `npm run db:seed` contra esa base.
+2. **Almacenamiento**: crea un store de **Vercel Blob** y define `BLOB_READ_WRITE_TOKEN`.
+   El código detecta el token y usa Blob automáticamente.
+3. **Variables**: define `AUTH_SECRET`, `AUTH_TRUST_HOST=true`, `DATABASE_URL`,
+   `BLOB_READ_WRITE_TOKEN` y las `ADMIN_*` en el proyecto de Vercel.
+4. Despliega. El `build` corre `prisma generate` automáticamente.
+
+## Notas
+
+- Diseño y decisiones en `docs/superpowers/specs/2026-07-13-plataforma-marca-design.md`.
+- Los archivos locales se guardan en `.storage/` (ignorado por git).

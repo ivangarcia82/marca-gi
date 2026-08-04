@@ -1,0 +1,95 @@
+// Esquema de la Plataforma de Gestión de Marca — Generando Ideas
+//
+// DEV: SQLite (sin servicios externos).
+// PROD: para Postgres (Neon / Vercel), cambia `provider = "postgresql"`
+//       y apunta DATABASE_URL a la base Postgres. Los campos son portables
+//       (los "enums" se guardan como String para compatibilidad con SQLite).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id           String   @id @default(cuid())
+  nombre       String
+  email        String   @unique
+  cargo        String   @default("")
+  rol          String   @default("EMPLEADO") // ADMIN | EMPLEADO
+  passwordHash String
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  assets      Asset[]      @relation("AssetsDelUsuario")
+  evidencias  Evidencia[]  @relation("EvidenciasDelUsuario")
+}
+
+model Categoria {
+  id               String   @id @default(cuid())
+  nombre           String
+  descripcion      String   @default("")
+  orden            Int      @default(0)
+  activa           Boolean  @default(true)
+  requiereEvidencia Boolean @default(true)
+  createdAt        DateTime @default(now())
+
+  assets    Asset[]
+  evidencias Evidencia[]
+  recursos  RecursoGlobal[]
+}
+
+// Archivo compartido por toda la empresa dentro de una categoría
+// (fondos, brandbook, tipografías, papelería...). Se guarda una sola vez.
+model RecursoGlobal {
+  id          String   @id @default(cuid())
+  categoriaId String
+  nombre      String
+  archivoKey  String
+  mimeType    String
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  categoria Categoria @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+
+  @@index([categoriaId])
+}
+
+model Asset {
+  id          String   @id @default(cuid())
+  userId      String
+  categoriaId String
+  nombre      String
+  archivoKey  String
+  mimeType    String
+  subidoPor   String   @default("")
+  createdAt   DateTime @default(now())
+
+  usuario   Usuario   @relation("AssetsDelUsuario", fields: [userId], references: [id], onDelete: Cascade)
+  categoria Categoria @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([categoriaId])
+}
+
+model Evidencia {
+  id                 String    @id @default(cuid())
+  userId             String
+  categoriaId        String
+  archivoKey         String
+  mimeType           String
+  estado             String    @default("PENDIENTE") // PENDIENTE | APROBADA | RECHAZADA
+  comentarioRevision String    @default("")
+  revisadoPor        String    @default("")
+  revisadoEn         DateTime?
+  createdAt          DateTime  @default(now())
+
+  usuario   Usuario   @relation("EvidenciasDelUsuario", fields: [userId], references: [id], onDelete: Cascade)
+  categoria Categoria @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoriaId])
+  @@index([estado])
+}
