@@ -11,7 +11,12 @@ import { Readable } from "stream";
 import path from "path";
 import { randomUUID } from "crypto";
 
-const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+// Acepta el nombre estándar de Vercel Blob o el que genera un prefijo
+// personalizado (BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN).
+const blobToken =
+  process.env.BLOB_READ_WRITE_TOKEN ??
+  process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN;
+const useBlob = Boolean(blobToken);
 const STORAGE_DIR = path.join(process.cwd(), ".storage");
 
 function extFromMime(mime: string): string {
@@ -57,6 +62,7 @@ export async function saveFile(
       access: "public",
       addRandomSuffix: true,
       contentType: mimeType,
+      token: blobToken,
     });
     // La URL es no adivinable y nunca se expone al cliente directamente.
     return blob.url;
@@ -108,7 +114,7 @@ export async function deleteFile(key: string): Promise<void> {
   try {
     if (key.startsWith("http")) {
       const { del } = await import("@vercel/blob");
-      await del(key);
+      await del(key, { token: blobToken });
       return;
     }
     await fs.unlink(path.join(STORAGE_DIR, key));
