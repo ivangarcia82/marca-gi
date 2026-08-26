@@ -31,6 +31,7 @@ function extFromMime(mime: string): string {
       "docx",
     "application/vnd.openxmlformats-officedocument.presentationml.presentation":
       "pptx",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
   };
   return map[mime] ?? "bin";
 }

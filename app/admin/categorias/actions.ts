@@ -5,7 +5,12 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { saveFile, deleteFile } from "@/lib/storage";
-import { ROLES, ASSET_MIME_TYPES, MAX_FILE_BYTES } from "@/lib/constants";
+import {
+  ROLES,
+  ASSET_MIME_TYPES,
+  MAX_FILE_BYTES,
+  mimeDeRecurso,
+} from "@/lib/constants";
 
 export type CategoriaState = { ok?: boolean; error?: string };
 
@@ -110,8 +115,12 @@ export async function subirRecursoGlobalAction(
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Selecciona un archivo." };
   }
-  if (!ASSET_MIME_TYPES.includes(file.type)) {
-    return { error: "Formato no válido." };
+
+  const mimeType = mimeDeRecurso(file.name, file.type);
+  if (!mimeType) {
+    return {
+      error: "Formato no válido. Usa imagen, PDF, ZIP, Word, PowerPoint o Excel.",
+    };
   }
   if (file.size > MAX_FILE_BYTES) {
     return { error: "El archivo supera el máximo de 10 MB." };
@@ -127,14 +136,14 @@ export async function subirRecursoGlobalAction(
     _max: { orden: true },
   });
   const buffer = Buffer.from(await file.arrayBuffer());
-  const key = await saveFile("recursos", buffer, file.type, file.name);
+  const key = await saveFile("recursos", buffer, mimeType, file.name);
 
   await prisma.recursoGlobal.create({
     data: {
       categoriaId,
       nombre,
       archivoKey: key,
-      mimeType: file.type,
+      mimeType,
       orden: (max._max.orden ?? -1) + 1,
     },
   });

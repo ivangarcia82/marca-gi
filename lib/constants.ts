@@ -58,7 +58,30 @@ export const DOC_MIME_TYPES = [
   "application/vnd.openxmlformats-officedocument.presentationml.presentation", // pptx
 ];
 
-// Assets y recursos compartidos aceptan imágenes y documentos.
+// Assets personales y evidencias aceptan imágenes y documentos.
 export const ASSET_MIME_TYPES = [...IMAGE_MIME_TYPES, ...DOC_MIME_TYPES];
+
+// Hojas de cálculo. Solo se aceptan en recursos compartidos.
+const XLSX_MIME =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+// Recursos compartidos: lo mismo que los assets, más formatos de Excel.
+export const RECURSO_MIME_TYPES = [...ASSET_MIME_TYPES, XLSX_MIME];
+
+// `accept` del input de archivo de recursos compartidos.
+export const RECURSO_ACCEPT =
+  "image/*,application/pdf,application/zip,.docx,.pptx,.xlsx";
+
+/**
+ * Valida un archivo de recurso compartido y devuelve su MIME canónico, o null si no es válido.
+ */
+export function mimeDeRecurso(
+  nombreArchivo: string,
+  tipo: string,
+): string | null {
+  // Para Excel manda la extensión.
+  if (nombreArchivo.toLowerCase().endsWith(".xlsx")) return XLSX_MIME;
+  return RECURSO_MIME_TYPES.includes(tipo) ? tipo : null;
+}
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB (subidas por la interfaz)

@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { subirRecursoGlobalAction, type RecursoState } from "./actions";
+import { RECURSO_ACCEPT } from "@/lib/constants";
 
 const initial: RecursoState = {};
 
@@ -37,7 +38,7 @@ export function RecursoGlobalForm({ categoriaId }: { categoriaId: string }) {
         <input
           type="file"
           name="archivo"
-          accept="image/*,application/pdf,application/zip,.docx,.pptx"
+          accept={RECURSO_ACCEPT}
           required
           className="sr-only"
           onChange={(e) => setNombreArchivo(e.target.files?.[0]?.name ?? null)}
