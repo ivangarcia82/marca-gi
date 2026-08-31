@@ -6,7 +6,12 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { saveFile, deleteFile } from "@/lib/storage";
-import { ROLES, ASSET_MIME_TYPES, MAX_FILE_BYTES } from "@/lib/constants";
+import {
+  ROLES,
+  ARCHIVO_FORMATO_ERROR,
+  MAX_FILE_BYTES,
+  mimeDeArchivo,
+} from "@/lib/constants";
 
 export type EmpleadoState = { ok?: boolean; error?: string };
 
@@ -105,9 +110,8 @@ export async function subirAssetAction(
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Selecciona un archivo." };
   }
-  if (!ASSET_MIME_TYPES.includes(file.type)) {
-    return { error: "Formato no válido. Usa imagen o PDF." };
-  }
+  const mimeType = mimeDeArchivo(file.name, file.type);
+  if (!mimeType) return { error: ARCHIVO_FORMATO_ERROR };
   if (file.size > MAX_FILE_BYTES) {
     return { error: "El archivo supera el máximo de 10 MB." };
   }
@@ -120,7 +124,7 @@ export async function subirAssetAction(
   if (!categoria) return { error: "Categoría no encontrada." };
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const key = await saveFile("assets", buffer, file.type, file.name);
+  const key = await saveFile("assets", buffer, mimeType, file.name);
 
   await prisma.asset.create({
     data: {
@@ -128,7 +132,7 @@ export async function subirAssetAction(
       categoriaId,
       nombre,
       archivoKey: key,
-      mimeType: file.type,
+      mimeType,
       subidoPor: admin.name ?? "Administrador",
     },
   });

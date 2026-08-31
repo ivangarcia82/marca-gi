@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { asignarAssetBulkAction, type BulkAssetState } from "./actions";
+import { ARCHIVO_ACCEPT } from "@/lib/constants";
 
 const initial: BulkAssetState = {};
 
@@ -47,7 +48,7 @@ export function AsignarAssetBulkForm({
         <input
           type="file"
           name="archivo"
-          accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+          accept={ARCHIVO_ACCEPT}
           required
           className="sr-only"
           onChange={(e) => setNombreArchivo(e.target.files?.[0]?.name ?? null)}

@@ -7,9 +7,9 @@ import { prisma } from "@/lib/prisma";
 import { saveFile, deleteFile } from "@/lib/storage";
 import {
   ROLES,
-  ASSET_MIME_TYPES,
+  ARCHIVO_FORMATO_ERROR,
   MAX_FILE_BYTES,
-  mimeDeRecurso,
+  mimeDeArchivo,
 } from "@/lib/constants";
 
 export type CategoriaState = { ok?: boolean; error?: string };
@@ -116,12 +116,8 @@ export async function subirRecursoGlobalAction(
     return { error: "Selecciona un archivo." };
   }
 
-  const mimeType = mimeDeRecurso(file.name, file.type);
-  if (!mimeType) {
-    return {
-      error: "Formato no válido. Usa imagen, PDF, ZIP, Word, PowerPoint o Excel.",
-    };
-  }
+  const mimeType = mimeDeArchivo(file.name, file.type);
+  if (!mimeType) return { error: ARCHIVO_FORMATO_ERROR };
   if (file.size > MAX_FILE_BYTES) {
     return { error: "El archivo supera el máximo de 10 MB." };
   }
@@ -216,9 +212,8 @@ export async function asignarAssetBulkAction(
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Selecciona un archivo." };
   }
-  if (!ASSET_MIME_TYPES.includes(file.type)) {
-    return { error: "Formato no válido. Usa imagen o PDF." };
-  }
+  const mimeType = mimeDeArchivo(file.name, file.type);
+  if (!mimeType) return { error: ARCHIVO_FORMATO_ERROR };
   if (file.size > MAX_FILE_BYTES) {
     return { error: "El archivo supera el máximo de 10 MB." };
   }
@@ -242,14 +237,14 @@ export async function asignarAssetBulkAction(
 
   // Guarda una copia por empleado para que cada quien sea dueño de su archivo.
   for (const emp of empleados) {
-    const key = await saveFile("assets", buffer, file.type, file.name);
+    const key = await saveFile("assets", buffer, mimeType, file.name);
     await prisma.asset.create({
       data: {
         userId: emp.id,
         categoriaId,
         nombre,
         archivoKey: key,
-        mimeType: file.type,
+        mimeType,
         subidoPor: admin.name ?? "Administrador",
       },
     });

@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { subirAssetAction, type AssetState } from "../actions";
+import { ARCHIVO_ACCEPT } from "@/lib/constants";
 
 const initial: AssetState = {};
 
@@ -57,11 +58,11 @@ export function SubirAssetForm({
       </div>
 
       <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 transition hover:border-brand-400 hover:bg-brand-50/40">
-        <span className="truncate">{nombreArchivo ?? "Elegir archivo (imagen o PDF)…"}</span>
+        <span className="truncate">{nombreArchivo ?? "Elegir archivo…"}</span>
         <input
           type="file"
           name="archivo"
-          accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+          accept={ARCHIVO_ACCEPT}
           required
           className="sr-only"
           onChange={(e) => setNombreArchivo(e.target.files?.[0]?.name ?? null)}

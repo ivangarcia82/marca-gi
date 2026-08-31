@@ -42,7 +42,9 @@ export const CATEGORIAS_INICIALES = [
   },
 ];
 
-// Tipos de archivo aceptados para capturas y assets.
+// Tipos de archivo aceptados. Un solo catálogo para todo lo que sube un admin:
+// assets personales, asignación masiva y recursos compartidos.
+
 export const IMAGE_MIME_TYPES = [
   "image/png",
   "image/jpeg",
@@ -56,32 +58,40 @@ export const DOC_MIME_TYPES = [
   "application/zip",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // docx
   "application/vnd.openxmlformats-officedocument.presentationml.presentation", // pptx
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // xlsx
 ];
 
-// Assets personales y evidencias aceptan imágenes y documentos.
-export const ASSET_MIME_TYPES = [...IMAGE_MIME_TYPES, ...DOC_MIME_TYPES];
+export const ARCHIVO_MIME_TYPES = [...IMAGE_MIME_TYPES, ...DOC_MIME_TYPES];
 
-// Hojas de cálculo. Solo se aceptan en recursos compartidos.
-const XLSX_MIME =
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-
-// Recursos compartidos: lo mismo que los assets, más formatos de Excel.
-export const RECURSO_MIME_TYPES = [...ASSET_MIME_TYPES, XLSX_MIME];
-
-// `accept` del input de archivo de recursos compartidos.
-export const RECURSO_ACCEPT =
+// `accept` del input de archivo.
+export const ARCHIVO_ACCEPT =
   "image/*,application/pdf,application/zip,.docx,.pptx,.xlsx";
 
+// Mensaje de error único para cuando el formato no está permitido.
+export const ARCHIVO_FORMATO_ERROR =
+  "Formato no válido. Usa imagen, PDF, ZIP, Word, PowerPoint o Excel.";
+
+// Windows y Office a veces reportan un MIME genérico (o vacío) para los
+// formatos OOXML, así que para ellos manda la extensión.
+const MIME_POR_EXTENSION: Record<string, string> = {
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  pdf: "application/pdf",
+  zip: "application/zip",
+};
+
 /**
- * Valida un archivo de recurso compartido y devuelve su MIME canónico, o null si no es válido.
+ * Valida un archivo subido y devuelve su MIME canónico, o null si no es válido.
  */
-export function mimeDeRecurso(
+export function mimeDeArchivo(
   nombreArchivo: string,
   tipo: string,
 ): string | null {
-  // Para Excel manda la extensión.
-  if (nombreArchivo.toLowerCase().endsWith(".xlsx")) return XLSX_MIME;
-  return RECURSO_MIME_TYPES.includes(tipo) ? tipo : null;
+  const ext = nombreArchivo.toLowerCase().split(".").pop() ?? "";
+  const porExtension = MIME_POR_EXTENSION[ext];
+  if (porExtension) return porExtension;
+  return ARCHIVO_MIME_TYPES.includes(tipo) ? tipo : null;
 }
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB (subidas por la interfaz)
