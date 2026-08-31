@@ -19,6 +19,9 @@ model Usuario {
   nombre       String
   email        String   @unique
   cargo        String   @default("")
+  // Área/departamento al que pertenece. Vacío = sin clasificar; se agrupa
+  // aparte en los indicadores de cumplimiento por área.
+  area         String   @default("")
   rol          String   @default("EMPLEADO") // ADMIN | EMPLEADO
   passwordHash String
   activo       Boolean  @default(true)
@@ -27,6 +30,8 @@ model Usuario {
   assets     Asset[]             @relation("AssetsDelUsuario")
   evidencias Evidencia[]         @relation("EvidenciasDelUsuario")
   exenciones ExencionEvidencia[] @relation("ExencionesDelUsuario")
+
+  @@index([area])
 }
 
 model Categoria {

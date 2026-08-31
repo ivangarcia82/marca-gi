@@ -1,14 +1,25 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ROLES } from "@/lib/constants";
+import { areasExistentes } from "@/lib/areas";
 import {
+  SIN_AREA,
   categoriasRequeridas,
   cumplimientoEmpleado,
+  etiquetaArea,
 } from "@/lib/cumplimiento";
 import { CrearEmpleadoForm } from "./CrearEmpleadoForm";
 
-export default async function EmpleadosPage() {
-  const [categoriasActivas, empleados] = await Promise.all([
+export default async function EmpleadosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ area?: string | string[] }>;
+}) {
+  const { area } = await searchParams;
+  // El resumen enlaza aquí con el nombre del área tal cual se muestra.
+  const filtro = (Array.isArray(area) ? area[0] : area)?.trim() ?? "";
+
+  const [categoriasActivas, todos, areas] = await Promise.all([
     prisma.categoria.findMany({
       where: { activa: true, requiereEvidencia: true },
       select: { id: true },
@@ -21,9 +32,14 @@ export default async function EmpleadosPage() {
         exenciones: { select: { categoriaId: true } },
       },
     }),
+    areasExistentes(),
   ]);
 
   const activeIds = categoriasActivas.map((c) => c.id);
+  const empleados = filtro
+    ? todos.filter((e) => etiquetaArea(e.area) === filtro)
+    : todos;
+  const haySinArea = todos.some((e) => !e.area.trim());
 
   return (
     <div>
@@ -35,21 +51,50 @@ export default async function EmpleadosPage() {
       {/* Formulario de alta */}
       <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 font-semibold text-slate-900">Nuevo empleado</h2>
-        <CrearEmpleadoForm />
+        <CrearEmpleadoForm areas={areas} />
       </div>
 
       {/* Lista */}
       <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <h2 className="font-semibold text-slate-900">
-            Todos los empleados{" "}
+            {filtro || "Todos los empleados"}{" "}
             <span className="text-slate-400">({empleados.length})</span>
           </h2>
+
+          {/* Filtro por área. Como <form> GET funciona sin JavaScript. */}
+          <form method="get" className="flex items-center gap-2">
+            <label htmlFor="area" className="sr-only">
+              Filtrar por área
+            </label>
+            <select
+              id="area"
+              name="area"
+              defaultValue={filtro}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            >
+              <option value="">Todas las áreas</option>
+              {areas.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+              {haySinArea && <option value={SIN_AREA}>{SIN_AREA}</option>}
+            </select>
+            <button
+              type="submit"
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              Filtrar
+            </button>
+          </form>
         </div>
 
         {empleados.length === 0 ? (
           <p className="px-5 py-10 text-center text-sm text-slate-400">
-            Aún no hay empleados. Agrega el primero arriba.
+            {filtro
+              ? `Ningún empleado en «${filtro}».`
+              : "Aún no hay empleados. Agrega el primero arriba."}
           </p>
         ) : (
           <ul className="divide-y divide-slate-100">
@@ -91,6 +136,9 @@ export default async function EmpleadosPage() {
                       <p className="truncate text-xs text-slate-500">
                         {emp.email}
                         {emp.cargo ? ` · ${emp.cargo}` : ""}
+                      </p>
+                      <p className="truncate text-xs text-slate-400">
+                        {etiquetaArea(emp.area)}
                       </p>
                     </div>
 

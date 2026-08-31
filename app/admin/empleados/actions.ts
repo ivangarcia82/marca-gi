@@ -19,6 +19,7 @@ const crearSchema = z.object({
   nombre: z.string().min(2, "El nombre es muy corto."),
   email: z.string().email("Correo inválido."),
   cargo: z.string().optional(),
+  area: z.string().max(80, "El área es muy larga.").optional(),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
 });
 
@@ -32,6 +33,7 @@ export async function crearEmpleadoAction(
     nombre: formData.get("nombre"),
     email: formData.get("email"),
     cargo: formData.get("cargo") ?? "",
+    area: formData.get("area") ?? "",
     password: formData.get("password"),
   });
   if (!parsed.success) {
@@ -50,6 +52,7 @@ export async function crearEmpleadoAction(
       nombre: parsed.data.nombre.trim(),
       email,
       cargo: (parsed.data.cargo ?? "").trim(),
+      area: (parsed.data.area ?? "").trim(),
       rol: ROLES.EMPLEADO,
       passwordHash,
     },
@@ -72,6 +75,45 @@ export async function toggleEmpleadoActivoAction(formData: FormData) {
   });
   revalidatePath("/admin/empleados");
   revalidatePath(`/admin/empleados/${userId}`);
+}
+
+export type AreaState = { ok?: boolean; error?: string };
+
+const areaSchema = z.object({
+  userId: z.string().min(1),
+  area: z.string().max(80, "El área es muy larga."),
+});
+
+/** Cambia el área de un empleado. Vacío = queda "sin área" en los indicadores. */
+export async function actualizarAreaAction(
+  _prev: AreaState,
+  formData: FormData,
+): Promise<AreaState> {
+  await requireAdmin();
+
+  const parsed = areaSchema.safeParse({
+    userId: formData.get("userId"),
+    area: formData.get("area") ?? "",
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+  const { userId } = parsed.data;
+
+  const usuario = await prisma.usuario.findUnique({ where: { id: userId } });
+  if (!usuario || usuario.rol === ROLES.ADMIN) {
+    return { error: "Empleado no encontrado." };
+  }
+
+  await prisma.usuario.update({
+    where: { id: userId },
+    data: { area: parsed.data.area.trim() },
+  });
+
+  revalidatePath(`/admin/empleados/${userId}`);
+  revalidatePath("/admin/empleados");
+  revalidatePath("/admin");
+  return { ok: true };
 }
 
 export type ResetState = { ok?: boolean; error?: string };

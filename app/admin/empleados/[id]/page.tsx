@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ROLES } from "@/lib/constants";
+import { areasExistentes } from "@/lib/areas";
 import {
   categoriasRequeridas,
   cumplimientoEmpleado,
@@ -10,6 +11,7 @@ import { EstadoBadge } from "@/components/EstadoBadge";
 import { RevisarEvidencia } from "@/components/RevisarEvidencia";
 import { SubirAssetForm } from "./SubirAssetForm";
 import { ResetPasswordForm } from "./ResetPasswordForm";
+import { AreaForm } from "./AreaForm";
 import { EvidenciasRequeridasForm } from "./EvidenciasRequeridasForm";
 import {
   toggleEmpleadoActivoAction,
@@ -23,7 +25,7 @@ export default async function EmpleadoDetallePage({
 }) {
   const { id } = await params;
 
-  const [usuario, categoriasActivas] = await Promise.all([
+  const [usuario, categoriasActivas, areas] = await Promise.all([
     prisma.usuario.findUnique({
       where: { id },
       include: {
@@ -36,6 +38,7 @@ export default async function EmpleadoDetallePage({
       where: { activa: true },
       orderBy: { orden: "asc" },
     }),
+    areasExistentes(),
   ]);
 
   if (!usuario || usuario.rol === ROLES.ADMIN) notFound();
@@ -124,6 +127,7 @@ export default async function EmpleadoDetallePage({
               <p className="text-sm text-slate-500">
                 {usuario.email}
                 {usuario.cargo ? ` · ${usuario.cargo}` : ""}
+                {usuario.area ? ` · ${usuario.area}` : ""}
               </p>
             </div>
           </div>
@@ -137,6 +141,10 @@ export default async function EmpleadoDetallePage({
               {usuario.activo ? "Desactivar" : "Reactivar"}
             </button>
           </form>
+        </div>
+
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <AreaForm userId={usuario.id} area={usuario.area} areas={areas} />
         </div>
 
         <div className="mt-4 border-t border-slate-100 pt-4">

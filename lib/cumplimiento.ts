@@ -57,3 +57,74 @@ export function soloEvidenciasQueAplican<T extends EnCola>(evidencias: T[]): T[]
     (e) => !e.usuario.exenciones.some((x) => x.categoriaId === e.categoriaId),
   );
 }
+
+/** Etiqueta para los empleados a los que todavía no se les puso área. */
+export const SIN_AREA = "Sin área";
+
+/** Nombre de área listo para mostrar y agrupar (vacío → "Sin área"). */
+export function etiquetaArea(area: string): string {
+  return area.trim() || SIN_AREA;
+}
+
+type EmpleadoConArea = {
+  area: string;
+  evidencias: EvidenciaMin[];
+  exenciones: ExencionMin[];
+};
+
+export type CumplimientoArea = {
+  area: string;
+  empleados: number;
+  /** Evidencias esperadas: la suma de los objetivos individuales del área. */
+  total: number;
+  aprobadas: number;
+  pendientes: number;
+  pct: number;
+};
+
+/**
+ * El mismo KPI global, desglosado por área. El objetivo se suma empleado por
+ * empleado (cada quien tiene el suyo según sus exenciones), así que el total
+ * de todas las áreas coincide con el global.
+ */
+export function cumplimientoPorArea(
+  categoriasConEvidencia: Iterable<string>,
+  empleados: EmpleadoConArea[],
+): CumplimientoArea[] {
+  const ids = [...categoriasConEvidencia];
+  const acc = new Map<string, CumplimientoArea>();
+
+  for (const emp of empleados) {
+    const area = etiquetaArea(emp.area);
+    const fila = acc.get(area) ?? {
+      area,
+      empleados: 0,
+      total: 0,
+      aprobadas: 0,
+      pendientes: 0,
+      pct: 0,
+    };
+    const resumen = cumplimientoEmpleado(
+      categoriasRequeridas(ids, emp.exenciones),
+      emp.evidencias,
+    );
+    fila.empleados += 1;
+    fila.total += resumen.total;
+    fila.aprobadas += resumen.aprobadas;
+    fila.pendientes += resumen.pendientes;
+    acc.set(area, fila);
+  }
+
+  for (const fila of acc.values()) {
+    // Un área sin nada que entregar está al día, igual que un empleado exento.
+    fila.pct =
+      fila.total === 0 ? 100 : Math.round((fila.aprobadas / fila.total) * 100);
+  }
+
+  // Mejor cumplimiento primero; "Sin área" siempre al final porque no es un área real.
+  return [...acc.values()].sort((a, b) => {
+    if (a.area === SIN_AREA) return 1;
+    if (b.area === SIN_AREA) return -1;
+    return b.pct - a.pct || b.empleados - a.empleados || a.area.localeCompare(b.area);
+  });
+}

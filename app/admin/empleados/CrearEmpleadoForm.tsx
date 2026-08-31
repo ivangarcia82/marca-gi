@@ -14,7 +14,7 @@ function passwordAleatoria() {
   return out;
 }
 
-export function CrearEmpleadoForm() {
+export function CrearEmpleadoForm({ areas }: { areas: string[] }) {
   const [state, formAction, pending] = useActionState(
     crearEmpleadoAction,
     initial,
@@ -52,6 +52,23 @@ export function CrearEmpleadoForm() {
             Cargo
           </label>
           <input name="cargo" className={inputCls} placeholder="Opcional" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-600">
+            Área
+          </label>
+          {/* Lista abierta: sugiere las áreas ya usadas sin impedir crear una nueva. */}
+          <input
+            name="area"
+            list="areas-existentes"
+            className={inputCls}
+            placeholder="Opcional"
+          />
+          <datalist id="areas-existentes">
+            {areas.map((a) => (
+              <option key={a} value={a} />
+            ))}
+          </datalist>
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-slate-600">
