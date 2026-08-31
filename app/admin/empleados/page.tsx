@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { ESTADOS, ROLES } from "@/lib/constants";
+import { ROLES } from "@/lib/constants";
+import {
+  categoriasRequeridas,
+  cumplimientoEmpleado,
+} from "@/lib/cumplimiento";
 import { CrearEmpleadoForm } from "./CrearEmpleadoForm";
 
 export default async function EmpleadosPage() {
@@ -12,12 +16,14 @@ export default async function EmpleadosPage() {
     prisma.usuario.findMany({
       where: { rol: ROLES.EMPLEADO },
       orderBy: [{ activo: "desc" }, { nombre: "asc" }],
-      include: { evidencias: { select: { estado: true, categoriaId: true } } },
+      include: {
+        evidencias: { select: { estado: true, categoriaId: true } },
+        exenciones: { select: { categoriaId: true } },
+      },
     }),
   ]);
 
-  const activeIds = new Set(categoriasActivas.map((c) => c.id));
-  const totalCats = categoriasActivas.length;
+  const activeIds = categoriasActivas.map((c) => c.id);
 
   return (
     <div>
@@ -48,14 +54,13 @@ export default async function EmpleadosPage() {
         ) : (
           <ul className="divide-y divide-slate-100">
             {empleados.map((emp) => {
-              const aprobadas = emp.evidencias.filter(
-                (e) => e.estado === ESTADOS.APROBADA && activeIds.has(e.categoriaId),
-              ).length;
-              const pendientes = emp.evidencias.filter(
-                (e) => e.estado === ESTADOS.PENDIENTE && activeIds.has(e.categoriaId),
-              ).length;
-              const pct =
-                totalCats === 0 ? 0 : Math.round((aprobadas / totalCats) * 100);
+              // El total es por empleado: las categorías de las que está exento
+              // no cuentan ni arriba ni abajo de la fracción.
+              const requeridas = categoriasRequeridas(activeIds, emp.exenciones);
+              const { total, aprobadas, pendientes, pct } = cumplimientoEmpleado(
+                requeridas,
+                emp.evidencias,
+              );
 
               return (
                 <li key={emp.id}>
@@ -91,7 +96,9 @@ export default async function EmpleadosPage() {
 
                     <div className="hidden w-40 shrink-0 sm:block">
                       <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span>{aprobadas}/{totalCats}</span>
+                        <span>
+                          {aprobadas}/{total}
+                        </span>
                         <span>{pct}%</span>
                       </div>
                       <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">

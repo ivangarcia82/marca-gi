@@ -24,22 +24,24 @@ model Usuario {
   activo       Boolean  @default(true)
   createdAt    DateTime @default(now())
 
-  assets      Asset[]      @relation("AssetsDelUsuario")
-  evidencias  Evidencia[]  @relation("EvidenciasDelUsuario")
+  assets     Asset[]             @relation("AssetsDelUsuario")
+  evidencias Evidencia[]         @relation("EvidenciasDelUsuario")
+  exenciones ExencionEvidencia[] @relation("ExencionesDelUsuario")
 }
 
 model Categoria {
-  id               String   @id @default(cuid())
-  nombre           String
-  descripcion      String   @default("")
-  orden            Int      @default(0)
-  activa           Boolean  @default(true)
-  requiereEvidencia Boolean @default(true)
-  createdAt        DateTime @default(now())
+  id                String   @id @default(cuid())
+  nombre            String
+  descripcion       String   @default("")
+  orden             Int      @default(0)
+  activa            Boolean  @default(true)
+  requiereEvidencia Boolean  @default(true)
+  createdAt         DateTime @default(now())
 
-  assets    Asset[]
+  assets     Asset[]
   evidencias Evidencia[]
-  recursos  RecursoGlobal[]
+  recursos   RecursoGlobal[]
+  exenciones ExencionEvidencia[]
 }
 
 // Archivo compartido por toda la empresa dentro de una categoría
@@ -92,4 +94,23 @@ model Evidencia {
 
   @@unique([userId, categoriaId])
   @@index([estado])
+}
+
+// Evidencia que NO aplica a un empleado concreto. Por defecto todos deben
+// entregar todas las evidencias; cada fila aquí exime a un empleado de una
+// categoría, de modo que no cuenta ni en su total ni en su porcentaje.
+model ExencionEvidencia {
+  id          String   @id @default(cuid())
+  userId      String
+  categoriaId String
+  motivo      String   @default("")
+  creadoPor   String   @default("")
+  createdAt   DateTime @default(now())
+
+  usuario   Usuario   @relation("ExencionesDelUsuario", fields: [userId], references: [id], onDelete: Cascade)
+  categoria Categoria @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoriaId])
+  @@index([userId])
+  @@index([categoriaId])
 }

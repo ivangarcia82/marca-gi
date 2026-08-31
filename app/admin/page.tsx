@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ESTADOS, ROLES } from "@/lib/constants";
+import {
+  categoriasRequeridas,
+  cumplimientoEmpleado,
+  soloEvidenciasQueAplican,
+} from "@/lib/cumplimiento";
 
 function StatCard({
   label,
@@ -29,23 +34,46 @@ function StatCard({
 }
 
 export default async function AdminResumenPage() {
-  const [empleadosActivos, categoriasActivas, pendientes, aprobadas, colaPendiente] =
-    await Promise.all([
-      prisma.usuario.count({ where: { rol: ROLES.EMPLEADO, activo: true } }),
-      prisma.categoria.count({
-        where: { activa: true, requiereEvidencia: true },
-      }),
-      prisma.evidencia.count({ where: { estado: ESTADOS.PENDIENTE } }),
-      prisma.evidencia.count({ where: { estado: ESTADOS.APROBADA } }),
-      prisma.evidencia.findMany({
-        where: { estado: ESTADOS.PENDIENTE },
-        include: { usuario: true, categoria: true },
-        orderBy: { createdAt: "asc" },
-        take: 5,
-      }),
-    ]);
+  const [empleados, categoriasActivas, enCola] = await Promise.all([
+    prisma.usuario.findMany({
+      where: { rol: ROLES.EMPLEADO, activo: true },
+      select: {
+        evidencias: { select: { estado: true, categoriaId: true } },
+        exenciones: { select: { categoriaId: true } },
+      },
+    }),
+    prisma.categoria.findMany({
+      where: { activa: true, requiereEvidencia: true },
+      select: { id: true },
+    }),
+    prisma.evidencia.findMany({
+      where: { estado: ESTADOS.PENDIENTE },
+      include: {
+        usuario: { include: { exenciones: { select: { categoriaId: true } } } },
+        categoria: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
 
-  const objetivo = empleadosActivos * categoriasActivas;
+  // El objetivo se suma empleado por empleado: cada quien tiene su propio total
+  // según las evidencias de las que el admin lo haya eximido.
+  const activeIds = categoriasActivas.map((c) => c.id);
+  let objetivo = 0;
+  let aprobadas = 0;
+  for (const emp of empleados) {
+    const resumen = cumplimientoEmpleado(
+      categoriasRequeridas(activeIds, emp.exenciones),
+      emp.evidencias,
+    );
+    objetivo += resumen.total;
+    aprobadas += resumen.aprobadas;
+  }
+
+  const empleadosActivos = empleados.length;
+  const porRevisar = soloEvidenciasQueAplican(enCola);
+  const pendientes = porRevisar.length;
+  const colaPendiente = porRevisar.slice(0, 5);
   const pct = objetivo === 0 ? 0 : Math.round((aprobadas / objetivo) * 100);
 
   return (

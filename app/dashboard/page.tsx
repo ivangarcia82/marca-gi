@@ -3,12 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/AppHeader";
 import { EstadoBadge } from "@/components/EstadoBadge";
 import { EvidenciaUploader } from "@/components/EvidenciaUploader";
+import {
+  categoriasRequeridas,
+  cumplimientoEmpleado,
+} from "@/lib/cumplimiento";
 import { ESTADOS } from "@/lib/constants";
 
 export default async function DashboardPage() {
   const user = await requireUser();
 
-  const [categorias, assets, evidencias] = await Promise.all([
+  const [categorias, assets, evidencias, exenciones] = await Promise.all([
     prisma.categoria.findMany({
       where: { activa: true },
       orderBy: { orden: "asc" },
@@ -19,6 +23,10 @@ export default async function DashboardPage() {
       orderBy: { createdAt: "asc" },
     }),
     prisma.evidencia.findMany({ where: { userId: user.id } }),
+    prisma.exencionEvidencia.findMany({
+      where: { userId: user.id },
+      select: { categoriaId: true },
+    }),
   ]);
 
   const evPorCategoria = new Map(evidencias.map((e) => [e.categoriaId, e]));
@@ -29,12 +37,13 @@ export default async function DashboardPage() {
     assetsPorCategoria.set(a.categoriaId, list);
   }
 
-  const conEvidencia = categorias.filter((c) => c.requiereEvidencia);
-  const total = conEvidencia.length;
-  const aprobadas = conEvidencia.filter(
-    (c) => evPorCategoria.get(c.id)?.estado === ESTADOS.APROBADA,
-  ).length;
-  const pct = total === 0 ? 0 : Math.round((aprobadas / total) * 100);
+  // Las evidencias que el administrador marcó como "no aplica" para este
+  // empleado no cuentan en su total ni en su porcentaje.
+  const requeridas = categoriasRequeridas(
+    categorias.filter((c) => c.requiereEvidencia).map((c) => c.id),
+    exenciones,
+  );
+  const { total, aprobadas, pct } = cumplimientoEmpleado(requeridas, evidencias);
 
   return (
     <div className="min-h-dvh">
@@ -58,7 +67,9 @@ export default async function DashboardPage() {
               Tu cumplimiento
             </span>
             <span className="text-sm font-semibold text-slate-900">
-              {aprobadas} de {total} aprobadas
+              {total === 0
+                ? "Sin evidencias por entregar"
+                : `${aprobadas} de ${total} aprobadas`}
             </span>
           </div>
           <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
@@ -80,6 +91,9 @@ export default async function DashboardPage() {
               const ev = evPorCategoria.get(cat.id);
               const catAssets = assetsPorCategoria.get(cat.id) ?? [];
               const estado = ev?.estado ?? "SIN_SUBIR";
+              // Pide evidencia y además le toca a este empleado.
+              const pideEvidencia =
+                cat.requiereEvidencia && requeridas.has(cat.id);
               const descargas = [
                 ...cat.recursos.map((r) => ({
                   id: r.id,
@@ -109,11 +123,11 @@ export default async function DashboardPage() {
                         </p>
                       )}
                     </div>
-                    {cat.requiereEvidencia ? (
+                    {pideEvidencia ? (
                       <EstadoBadge estado={estado} />
                     ) : (
                       <span className="whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
-                        Solo descarga
+                        {cat.requiereEvidencia ? "No aplica" : "Solo descarga"}
                       </span>
                     )}
                   </div>
@@ -157,8 +171,8 @@ export default async function DashboardPage() {
                     )}
                   </div>
 
-                  {/* Zona de evidencia (solo si la categoría la requiere) */}
-                  {cat.requiereEvidencia && (
+                  {/* Zona de evidencia (solo si le aplica al empleado) */}
+                  {pideEvidencia && (
                     <>
                       {estado === ESTADOS.RECHAZADA && ev?.comentarioRevision && (
                         <div className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-inset ring-rose-200">

@@ -2,10 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ROLES } from "@/lib/constants";
+import {
+  categoriasRequeridas,
+  cumplimientoEmpleado,
+} from "@/lib/cumplimiento";
 import { EstadoBadge } from "@/components/EstadoBadge";
 import { RevisarEvidencia } from "@/components/RevisarEvidencia";
 import { SubirAssetForm } from "./SubirAssetForm";
 import { ResetPasswordForm } from "./ResetPasswordForm";
+import { EvidenciasRequeridasForm } from "./EvidenciasRequeridasForm";
 import {
   toggleEmpleadoActivoAction,
   eliminarAssetAction,
@@ -24,6 +29,7 @@ export default async function EmpleadoDetallePage({
       include: {
         assets: { include: { categoria: true }, orderBy: { createdAt: "asc" } },
         evidencias: { include: { categoria: true } },
+        exenciones: true,
       },
     }),
     prisma.categoria.findMany({
@@ -35,6 +41,10 @@ export default async function EmpleadoDetallePage({
   if (!usuario || usuario.rol === ROLES.ADMIN) notFound();
 
   const evPorCat = new Map(usuario.evidencias.map((e) => [e.categoriaId, e]));
+  // Categorías eximidas para este empleado (catId -> motivo).
+  const exentasPorCat = new Map(
+    usuario.exenciones.map((x) => [x.categoriaId, x.motivo]),
+  );
   const assetsPorCat = new Map<string, typeof usuario.assets>();
   for (const a of usuario.assets) {
     const list = assetsPorCat.get(a.categoriaId) ?? [];
@@ -68,6 +78,14 @@ export default async function EmpleadoDetallePage({
         evPorCat.has(c.id),
     )
     .sort((a, b) => a.orden - b.orden);
+
+  // Solo las categorías activas que piden evidencia pueden eximirse.
+  const exigibles = categoriasActivas.filter((c) => c.requiereEvidencia);
+  const requeridas = categoriasRequeridas(
+    exigibles.map((c) => c.id),
+    usuario.exenciones,
+  );
+  const resumen = cumplimientoEmpleado(requeridas, usuario.evidencias);
 
   return (
     <div>
@@ -126,6 +144,43 @@ export default async function EmpleadoDetallePage({
         </div>
       </div>
 
+      {/* Evidencias que le aplican */}
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="font-semibold text-slate-900">
+              Evidencias requeridas
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Desmarca las que no apliquen a este empleado: dejan de contar en
+              su cumplimiento.
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-semibold text-slate-900">
+              {resumen.pct}%
+            </p>
+            <p className="text-xs text-slate-400">
+              {resumen.aprobadas} de {resumen.total} aprobadas
+            </p>
+          </div>
+        </div>
+        {exigibles.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            Ninguna categoría activa pide evidencia.
+          </p>
+        ) : (
+          <EvidenciasRequeridasForm
+            userId={usuario.id}
+            categorias={exigibles.map((c) => ({
+              id: c.id,
+              nombre: c.nombre,
+              motivoExencion: exentasPorCat.get(c.id) ?? null,
+            }))}
+          />
+        )}
+      </div>
+
       {/* Agregar archivo de marca */}
       <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-1 font-semibold text-slate-900">
@@ -148,6 +203,8 @@ export default async function EmpleadoDetallePage({
         {listaCategorias.map((cat) => {
           const ev = evPorCat.get(cat.id);
           const catAssets = assetsPorCat.get(cat.id) ?? [];
+          // null = le aplica; string = exenta (con su motivo, que puede ir vacío).
+          const motivoExencion = exentasPorCat.get(cat.id) ?? null;
           return (
             <section
               key={cat.id}
@@ -162,8 +219,12 @@ export default async function EmpleadoDetallePage({
                     </span>
                   )}
                 </h3>
-                {cat.requiereEvidencia ? (
+                {cat.requiereEvidencia && motivoExencion === null ? (
                   <EstadoBadge estado={ev?.estado ?? "SIN_SUBIR"} />
+                ) : cat.requiereEvidencia ? (
+                  <span className="whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
+                    No aplica
+                  </span>
                 ) : (
                   <span className="whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
                     Solo descarga
@@ -217,7 +278,13 @@ export default async function EmpleadoDetallePage({
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
                     Evidencia
                   </p>
-                  {!ev ? (
+                  {motivoExencion !== null ? (
+                    <p className="text-sm text-slate-400">
+                      No aplica para este empleado.
+                      {motivoExencion ? ` Motivo: ${motivoExencion}` : ""}
+                      {ev ? " Su evidencia anterior sigue guardada." : ""}
+                    </p>
+                  ) : !ev ? (
                     <p className="text-sm text-slate-400">
                       El empleado aún no ha subido evidencia.
                     </p>

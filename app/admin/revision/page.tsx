@@ -1,13 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { ESTADOS } from "@/lib/constants";
+import { soloEvidenciasQueAplican } from "@/lib/cumplimiento";
 import { RevisarEvidencia } from "@/components/RevisarEvidencia";
 
 export default async function RevisionPage() {
-  const pendientes = await prisma.evidencia.findMany({
+  const enCola = await prisma.evidencia.findMany({
     where: { estado: ESTADOS.PENDIENTE },
-    include: { usuario: true, categoria: true },
+    include: {
+      usuario: { include: { exenciones: { select: { categoriaId: true } } } },
+      categoria: true,
+    },
     orderBy: { createdAt: "asc" },
   });
+  // No pedimos revisar evidencias que ya no le aplican al empleado.
+  const pendientes = soloEvidenciasQueAplican(enCola);
 
   return (
     <div>

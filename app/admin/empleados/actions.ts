@@ -151,3 +151,73 @@ export async function eliminarAssetAction(formData: FormData) {
   await prisma.asset.delete({ where: { id: assetId } });
   revalidatePath(`/admin/empleados/${asset.userId}`);
 }
+
+export type ExencionesState = { ok?: boolean; error?: string };
+
+const exencionesSchema = z.object({
+  userId: z.string().min(1),
+  // Todas las categorías que el admin tenía en pantalla.
+  mostradas: z.array(z.string().min(1)),
+  exentas: z.array(
+    z.object({ categoriaId: z.string().min(1), motivo: z.string().max(300) }),
+  ),
+});
+
+export type ExencionesInput = z.infer<typeof exencionesSchema>;
+
+/**
+ * Guarda qué evidencias le aplican a un empleado: las de `exentas` dejan de
+ * contar para él y el resto de las `mostradas` vuelven a ser obligatorias.
+ *
+ * No se dispara desde un <form>: React resetea el formulario al terminar la
+ * acción (form.reset() nativo) y eso deja los checkboxes controlados con el
+ * valor que tenían al cargar la página.
+ */
+export async function guardarExencionesAction(
+  input: ExencionesInput,
+): Promise<ExencionesState> {
+  const admin = await requireAdmin();
+
+  const parsed = exencionesSchema.safeParse(input);
+  if (!parsed.success) return { error: "Datos inválidos." };
+  const { userId, mostradas, exentas } = parsed.data;
+
+  const enPantalla = new Set(mostradas);
+  if (exentas.some((e) => !enPantalla.has(e.categoriaId))) {
+    return { error: "Datos inválidos." };
+  }
+
+  const usuario = await prisma.usuario.findUnique({ where: { id: userId } });
+  if (!usuario || usuario.rol === ROLES.ADMIN) {
+    return { error: "Empleado no encontrado." };
+  }
+
+  const exentasIds = new Set(exentas.map((e) => e.categoriaId));
+  const vuelvenAAplicar = mostradas.filter((id) => !exentasIds.has(id));
+
+  await prisma.$transaction([
+    prisma.exencionEvidencia.deleteMany({
+      where: { userId, categoriaId: { in: vuelvenAAplicar } },
+    }),
+    // Upsert (en vez de borrar y recrear) para conservar quién y cuándo la eximió.
+    ...exentas.map(({ categoriaId, motivo }) =>
+      prisma.exencionEvidencia.upsert({
+        where: { userId_categoriaId: { userId, categoriaId } },
+        create: {
+          userId,
+          categoriaId,
+          motivo: motivo.trim(),
+          creadoPor: admin.name ?? "Administrador",
+        },
+        update: { motivo: motivo.trim() },
+      }),
+    ),
+  ]);
+
+  revalidatePath(`/admin/empleados/${userId}`);
+  revalidatePath("/admin/empleados");
+  revalidatePath("/admin");
+  revalidatePath("/admin/revision");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}

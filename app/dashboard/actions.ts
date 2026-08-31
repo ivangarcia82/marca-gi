@@ -26,11 +26,17 @@ export async function subirEvidenciaAction(
     return { error: "La imagen supera el máximo de 10 MB." };
   }
 
-  const categoria = await prisma.categoria.findUnique({
-    where: { id: categoriaId },
-  });
+  const [categoria, exencion] = await Promise.all([
+    prisma.categoria.findUnique({ where: { id: categoriaId } }),
+    prisma.exencionEvidencia.findUnique({
+      where: { userId_categoriaId: { userId: user.id, categoriaId } },
+    }),
+  ]);
   if (!categoria || !categoria.activa) {
     return { error: "La categoría no existe o está inactiva." };
+  }
+  if (!categoria.requiereEvidencia || exencion) {
+    return { error: "Esta evidencia no aplica para ti." };
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
