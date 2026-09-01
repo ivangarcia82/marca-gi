@@ -3,6 +3,7 @@ import { authConfig } from "@/auth.config";
 
 const { auth } = NextAuth(authConfig);
 
+// En Next 16 el convenio `middleware.ts` quedó deprecado y se llama `proxy.ts`.
 export default auth;
 
 export const config = {

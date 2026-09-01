@@ -1,7 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 import { ROLES } from "@/lib/constants";
 
-// Configuración segura para el Edge (middleware): sin Prisma ni bcrypt.
+// Configuración segura para el Edge (proxy.ts): sin Prisma ni bcrypt.
 // La lógica de login con base de datos vive en auth.ts.
 export const authConfig = {
   pages: { signIn: "/login" },
@@ -21,12 +21,22 @@ export const authConfig = {
       }
       return session;
     },
-    authorized({ auth, request: { nextUrl } }) {
+    authorized({ auth, request }) {
+      const { nextUrl } = request;
       const isLoggedIn = Boolean(auth?.user);
       const role = auth?.user?.role;
       const { pathname } = nextUrl;
 
       if (pathname.startsWith("/api/auth")) return true;
+
+      // Las llamadas a Server Actions (cabecera `next-action`) no se pueden
+      // redirigir desde aquí: el cliente las pide por fetch esperando una
+      // respuesta RSC, sigue el redirect sin darse cuenta, recibe el HTML del
+      // destino y revienta con "An unexpected response was received from the
+      // server" —que se lleva por delante toda la página—. Las dejamos pasar:
+      // cada action se protege sola con requireUser/requireAdmin y su
+      // redirect() sí viaja en el formato que el router entiende.
+      if (request.headers.has("next-action")) return true;
 
       if (pathname === "/login") {
         if (isLoggedIn) {
