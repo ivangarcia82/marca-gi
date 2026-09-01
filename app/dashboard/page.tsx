@@ -8,6 +8,7 @@ import {
   cumplimientoEmpleado,
 } from "@/lib/cumplimiento";
 import { ESTADOS } from "@/lib/constants";
+import { blobHabilitado } from "@/lib/storage";
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -200,6 +201,8 @@ export default async function DashboardPage() {
                         <EvidenciaUploader
                           categoriaId={cat.id}
                           yaSubida={Boolean(ev)}
+                          subidaDirecta={blobHabilitado}
+                          userId={user.id}
                         />
                       </div>
                     </>

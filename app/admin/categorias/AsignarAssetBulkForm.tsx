@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { asignarAssetBulkAction, type BulkAssetState } from "./actions";
-import { ARCHIVO_ACCEPT } from "@/lib/constants";
+import { ARCHIVO_ACCEPT, avisoTamano } from "@/lib/constants";
 
 const initial: BulkAssetState = {};
 
@@ -19,12 +19,14 @@ export function AsignarAssetBulkForm({
   );
   const [todos, setTodos] = useState(true);
   const [nombreArchivo, setNombreArchivo] = useState<string | null>(null);
+  const [errorTamano, setErrorTamano] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (state.ok) {
       formRef.current?.reset();
       setNombreArchivo(null);
+      setErrorTamano(null);
       setTodos(true);
     }
   }, [state.ok]);
@@ -51,7 +53,11 @@ export function AsignarAssetBulkForm({
           accept={ARCHIVO_ACCEPT}
           required
           className="sr-only"
-          onChange={(e) => setNombreArchivo(e.target.files?.[0]?.name ?? null)}
+          onChange={(e) => {
+            const archivo = e.target.files?.[0] ?? null;
+            setNombreArchivo(archivo?.name ?? null);
+            setErrorTamano(archivo ? avisoTamano(archivo.size) : null);
+          }}
         />
       </label>
 
@@ -89,7 +95,9 @@ export function AsignarAssetBulkForm({
         </div>
       )}
 
-      {state.error && <p className="text-xs text-rose-600">{state.error}</p>}
+      {(errorTamano ?? state.error) && (
+        <p className="text-xs text-rose-600">{errorTamano ?? state.error}</p>
+      )}
       {state.ok && (
         <p className="text-xs text-emerald-600">
           Archivo asignado a {state.count} empleado(s).
@@ -98,7 +106,7 @@ export function AsignarAssetBulkForm({
 
       <button
         type="submit"
-        disabled={pending || !nombreArchivo}
+        disabled={pending || !nombreArchivo || Boolean(errorTamano)}
         className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-50"
       >
         {pending ? "Asignando…" : "Asignar archivo"}

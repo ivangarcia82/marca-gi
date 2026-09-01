@@ -94,4 +94,31 @@ export function mimeDeArchivo(
   return ARCHIVO_MIME_TYPES.includes(tipo) ? tipo : null;
 }
 
-export const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB (subidas por la interfaz)
+// Tope de las subidas que pasan por el servidor (server actions). No puede
+// crecer: en Vercel el cuerpo de una petición a una función se corta en 4.5 MB
+// (413 FUNCTION_PAYLOAD_TOO_LARGE) antes de que nuestro código llegue a correr,
+// y `serverActions.bodySizeLimit` no puede saltarse ese techo de la plataforma.
+// Solo se usa en local sin token de Blob y en las subidas del panel de admin.
+export const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4 MB
+
+// Tope de las evidencias que el navegador sube DIRECTO a Vercel Blob. Ese
+// camino no toca la función, así que no le aplica el límite de 4.5 MB; este
+// número existe solo para que nadie llene el store por accidente.
+export const MAX_EVIDENCIA_BYTES = 100 * 1024 * 1024; // 100 MB
+
+/** "4 MB", "100 MB"… para los mensajes de error. */
+export function enMB(bytes: number): string {
+  return `${Math.round(bytes / 1024 / 1024)} MB`;
+}
+
+/**
+ * Aviso si el archivo no cabe en el tope indicado; null si cabe. Se usa en el
+ * cliente para avisar antes de enviar: pasado el límite del cuerpo, la
+ * petición muere en el parser y el mensaje del servidor nunca llega.
+ */
+export function avisoTamano(
+  bytes: number,
+  max: number = MAX_FILE_BYTES,
+): string | null {
+  return bytes > max ? `El archivo supera el máximo de ${enMB(max)}.` : null;
+}

@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { subirRecursoGlobalAction, type RecursoState } from "./actions";
-import { ARCHIVO_ACCEPT } from "@/lib/constants";
+import { ARCHIVO_ACCEPT, avisoTamano } from "@/lib/constants";
 
 const initial: RecursoState = {};
 
@@ -12,12 +12,14 @@ export function RecursoGlobalForm({ categoriaId }: { categoriaId: string }) {
     initial,
   );
   const [nombreArchivo, setNombreArchivo] = useState<string | null>(null);
+  const [errorTamano, setErrorTamano] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (state.ok) {
       formRef.current?.reset();
       setNombreArchivo(null);
+      setErrorTamano(null);
     }
   }, [state.ok]);
 
@@ -41,14 +43,20 @@ export function RecursoGlobalForm({ categoriaId }: { categoriaId: string }) {
           accept={ARCHIVO_ACCEPT}
           required
           className="sr-only"
-          onChange={(e) => setNombreArchivo(e.target.files?.[0]?.name ?? null)}
+          onChange={(e) => {
+            const archivo = e.target.files?.[0] ?? null;
+            setNombreArchivo(archivo?.name ?? null);
+            setErrorTamano(archivo ? avisoTamano(archivo.size) : null);
+          }}
         />
       </label>
-      {state.error && <p className="text-xs text-rose-600">{state.error}</p>}
+      {(errorTamano ?? state.error) && (
+        <p className="text-xs text-rose-600">{errorTamano ?? state.error}</p>
+      )}
       {state.ok && <p className="text-xs text-emerald-600">Recurso agregado.</p>}
       <button
         type="submit"
-        disabled={pending || !nombreArchivo}
+        disabled={pending || !nombreArchivo || Boolean(errorTamano)}
         className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-50"
       >
         {pending ? "Subiendo…" : "Agregar recurso compartido"}

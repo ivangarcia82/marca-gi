@@ -10,6 +10,7 @@ import {
   ROLES,
   ARCHIVO_FORMATO_ERROR,
   MAX_FILE_BYTES,
+  enMB,
   mimeDeArchivo,
 } from "@/lib/constants";
 
@@ -155,7 +156,7 @@ export async function subirAssetAction(
   const mimeType = mimeDeArchivo(file.name, file.type);
   if (!mimeType) return { error: ARCHIVO_FORMATO_ERROR };
   if (file.size > MAX_FILE_BYTES) {
-    return { error: "El archivo supera el máximo de 10 MB." };
+    return { error: `El archivo supera el máximo de ${enMB(MAX_FILE_BYTES)}.` };
   }
 
   const [usuario, categoria] = await Promise.all([

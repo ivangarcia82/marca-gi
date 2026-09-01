@@ -19,6 +19,13 @@ const blobToken =
 const useBlob = Boolean(blobToken);
 const STORAGE_DIR = path.join(process.cwd(), ".storage");
 
+/**
+ * `true` cuando los archivos van a Vercel Blob. Solo entonces el navegador
+ * puede subir directo al almacenamiento (sin pasar por el servidor); en local,
+ * sin token, se sube por el server action contra el disco.
+ */
+export const blobHabilitado = useBlob;
+
 function extFromMime(mime: string): string {
   const map: Record<string, string> = {
     "image/png": "png",
@@ -74,6 +81,29 @@ export async function saveFile(
   const filePath = path.join(dir, name);
   await fs.writeFile(filePath, buffer);
   return `${prefix}/${name}`;
+}
+
+/**
+ * Metadatos de un blob que subió el navegador. Que `head` responda ya prueba
+ * que la `key` pertenece a NUESTRO store (el token lo delimita), así que sirve
+ * para validar lo que el cliente dice haber subido antes de guardarlo en base.
+ * Devuelve null si no existe o si el Blob no está activo.
+ */
+export async function blobInfo(
+  key: string,
+): Promise<{ pathname: string; size: number; contentType: string } | null> {
+  if (!useBlob || !key.startsWith("http")) return null;
+  try {
+    const { head } = await import("@vercel/blob");
+    const blob = await head(key, { token: blobToken });
+    return {
+      pathname: blob.pathname,
+      size: blob.size,
+      contentType: blob.contentType,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /** Lee un archivo por su `key`. Devuelve el buffer o null si no existe. */
