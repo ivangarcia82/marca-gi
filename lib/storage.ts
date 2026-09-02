@@ -140,16 +140,26 @@ export async function readStream(key: string): Promise<ReadableStream | null> {
   }
 }
 
-/** Elimina un archivo por su `key`. No lanza si ya no existe. */
-export async function deleteFile(key: string): Promise<void> {
+/**
+ * Elimina un archivo por su `key`. No lanza nunca.
+ *
+ * Devuelve `true` si tras la llamada el archivo ya no está (borrado, o no
+ * existía). `false` solo si el borrado falló de verdad —token inválido, red
+ * caída—, para que quien llame no dé por perdida una referencia que todavía
+ * apunta a algo y el archivo quede huérfano en el store.
+ */
+export async function deleteFile(key: string): Promise<boolean> {
+  if (!key) return true;
   try {
     if (key.startsWith("http")) {
       const { del } = await import("@vercel/blob");
       await del(key, { token: blobToken });
-      return;
+      return true;
     }
     await fs.unlink(path.join(STORAGE_DIR, key));
-  } catch {
-    // ignorar si no existe
+    return true;
+  } catch (error) {
+    // Que ya no exista es justo lo que buscábamos.
+    return (error as NodeJS.ErrnoException)?.code === "ENOENT";
   }
 }

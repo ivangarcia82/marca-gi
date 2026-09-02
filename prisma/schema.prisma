@@ -83,15 +83,17 @@ model Asset {
 }
 
 model Evidencia {
-  id                 String    @id @default(cuid())
-  userId             String
-  categoriaId        String
-  archivoKey         String
-  mimeType           String
+  id          String @id @default(cuid())
+  userId      String
+  categoriaId String
+  archivoKey  String
+  mimeType    String
+
   estado             String    @default("PENDIENTE") // PENDIENTE | APROBADA | RECHAZADA
   comentarioRevision String    @default("")
   revisadoPor        String    @default("")
   revisadoEn         DateTime?
+  archivoEliminadoEn DateTime?
   createdAt          DateTime  @default(now())
 
   usuario   Usuario   @relation("EvidenciasDelUsuario", fields: [userId], references: [id], onDelete: Cascade)

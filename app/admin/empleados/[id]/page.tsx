@@ -298,19 +298,29 @@ export default async function EmpleadoDetallePage({
                     </p>
                   ) : (
                     <div className="space-y-3">
-                      <a
-                        href={`/api/files/evidencia/${ev.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block overflow-hidden rounded-lg border border-slate-200"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={`/api/files/evidencia/${ev.id}`}
-                          alt={`Evidencia de ${cat.nombre}`}
-                          className="max-h-40 w-full object-cover"
-                        />
-                      </a>
+                      {ev.archivoKey ? (
+                        <a
+                          href={`/api/files/evidencia/${ev.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block overflow-hidden rounded-lg border border-slate-200"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={`/api/files/evidencia/${ev.id}`}
+                            alt={`Evidencia de ${cat.nombre}`}
+                            className="max-h-40 w-full object-cover"
+                          />
+                        </a>
+                      ) : (
+                        <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-center text-xs text-slate-500">
+                          Archivo eliminado al aprobarse
+                          {ev.archivoEliminadoEn
+                            ? ` el ${ev.archivoEliminadoEn.toLocaleDateString("es-MX")}`
+                            : ""}
+                          . Queda el registro de cumplimiento.
+                        </p>
+                      )}
                       {ev.comentarioRevision && (
                         <p className="text-xs text-slate-500">
                           <span className="font-medium">Comentario:</span>{" "}

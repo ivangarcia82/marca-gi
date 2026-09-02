@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { deleteFile } from "@/lib/storage";
 import { ESTADOS } from "@/lib/constants";
 import { enviarCorreoRechazo } from "@/lib/email";
 
@@ -30,6 +31,14 @@ export async function revisarEvidenciaAction(
   });
   if (!ev) return { error: "La evidencia ya no existe." };
 
+  // Aprobada = cumplida: el archivo ya no hace falta y se borra del
+  // almacenamiento; la fila se queda como constancia de que se cumplió.
+  const purgar = decision === ESTADOS.APROBADA && Boolean(ev.archivoKey);
+
+  // Primero la base, después el archivo. Al revés, si la escritura falla nos
+  // quedamos sin archivo Y sin aprobación registrada. En este orden, lo peor
+  // que puede pasar es que el archivo sobreviva sin que nadie lo referencie,
+  // y de eso se encarga `npm run evidencias:purgar -- --huerfanos`.
   await prisma.evidencia.update({
     where: { id: evidenciaId },
     data: {
@@ -37,8 +46,15 @@ export async function revisarEvidenciaAction(
       comentarioRevision: decision === ESTADOS.RECHAZADA ? comentario : "",
       revisadoPor: admin.name ?? "Administrador",
       revisadoEn: new Date(),
+      ...(purgar ? { archivoKey: "", archivoEliminadoEn: new Date() } : {}),
     },
   });
+
+  if (purgar && !(await deleteFile(ev.archivoKey))) {
+    console.warn(
+      `No se pudo borrar el archivo de la evidencia ${evidenciaId}: ${ev.archivoKey}`,
+    );
+  }
 
   // Al rechazar, avisamos al empleado por correo (no bloquea si falla).
   if (decision === ESTADOS.RECHAZADA && ev.usuario.email) {
@@ -50,6 +66,7 @@ export async function revisarEvidenciaAction(
     });
   }
 
+  revalidatePath("/dashboard");
   revalidatePath("/admin/revision");
   revalidatePath(`/admin/empleados/${ev.userId}`);
   revalidatePath("/admin");

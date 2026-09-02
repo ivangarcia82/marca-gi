@@ -61,6 +61,8 @@ async function guardarEvidencia(
         comentarioRevision: "",
         revisadoPor: "",
         revisadoEn: null,
+        // Vuelve a haber archivo: la marca de borrado ya no aplica.
+        archivoEliminadoEn: null,
         createdAt: new Date(),
       },
     });

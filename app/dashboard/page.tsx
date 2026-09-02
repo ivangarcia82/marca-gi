@@ -184,7 +184,7 @@ export default async function DashboardPage() {
                         </div>
                       )}
 
-                      {ev && (
+                      {ev && ev.archivoKey && (
                         <p className="mt-4 text-sm">
                           <a
                             href={`/api/files/evidencia/${ev.id}`}
@@ -194,6 +194,12 @@ export default async function DashboardPage() {
                           >
                             Ver mi evidencia actual
                           </a>
+                        </p>
+                      )}
+                      {ev && !ev.archivoKey && (
+                        <p className="mt-4 text-sm text-slate-500">
+                          Evidencia aprobada. La captura se eliminó; queda el
+                          registro de que cumpliste.
                         </p>
                       )}
 
