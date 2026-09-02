@@ -13,7 +13,11 @@ import { randomUUID } from "crypto";
 
 // Acepta el nombre estándar de Vercel Blob o el que genera un prefijo
 // personalizado (BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN).
-const blobToken =
+//
+// Se exporta porque el SDK, cuando no se le pasa `token`, solo mira
+// BLOB_READ_WRITE_TOKEN: quien llame a @vercel/blob desde fuera de este módulo
+// tiene que pasar este valor o fallará donde el nombre sea el personalizado.
+export const blobToken =
   process.env.BLOB_READ_WRITE_TOKEN ??
   process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN;
 const useBlob = Boolean(blobToken);

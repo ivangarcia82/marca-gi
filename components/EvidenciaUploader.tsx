@@ -16,6 +16,38 @@ const ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
 // A partir de aquí Blob parte el archivo y sube los trozos en paralelo.
 const UMBRAL_MULTIPART = 8 * 1024 * 1024;
 
+const RUTA_SUBIDA = "/api/evidencias/subida";
+
+/**
+ * `upload()` esconde por qué el servidor negó la subida: lo envuelve todo en
+ * "Failed to retrieve the client token". Cuando pasa eso, se le vuelve a
+ * preguntar a la ruta para poder mostrar el motivo de verdad.
+ */
+async function motivoDelRechazo(
+  ruta: string,
+  categoriaId: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(RUTA_SUBIDA, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        type: "blob.generate-client-token",
+        payload: {
+          pathname: ruta,
+          multipart: false,
+          clientPayload: JSON.stringify({ categoriaId }),
+        },
+      }),
+    });
+    if (res.ok) return null;
+    const { error } = await res.json();
+    return typeof error === "string" ? error : null;
+  } catch {
+    return null;
+  }
+}
+
 export function EvidenciaUploader({
   categoriaId,
   yaSubida,
@@ -70,11 +102,12 @@ function UploaderDirecto({
 
     setEstado(initial);
     setProgreso(0);
+    const nombre = archivo.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const ruta = `evidencias/${userId}/${nombre}`;
     try {
-      const nombre = archivo.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const blob = await upload(`evidencias/${userId}/${nombre}`, archivo, {
+      const blob = await upload(ruta, archivo, {
         access: "private",
-        handleUploadUrl: "/api/evidencias/subida",
+        handleUploadUrl: RUTA_SUBIDA,
         clientPayload: JSON.stringify({ categoriaId }),
         contentType: archivo.type,
         multipart: archivo.size > UMBRAL_MULTIPART,
@@ -90,8 +123,15 @@ function UploaderDirecto({
         }
       });
     } catch (error) {
+      const mensaje = (error as Error).message ?? "";
+      console.error("Fallo al subir la evidencia:", mensaje);
+      const motivo = /client token/i.test(mensaje)
+        ? await motivoDelRechazo(ruta, categoriaId)
+        : null;
       setEstado({
-        error: (error as Error).message || "No se pudo subir la imagen.",
+        error:
+          motivo ??
+          "No se pudo subir la imagen. Vuelve a intentarlo; si sigue fallando, avisa al administrador.",
       });
     } finally {
       setProgreso(null);

@@ -2,9 +2,17 @@ import { NextRequest } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { blobToken } from "@/lib/storage";
 import { IMAGE_MIME_TYPES, MAX_EVIDENCIA_BYTES } from "@/lib/constants";
 
 export const runtime = "nodejs";
+
+/**
+ * Motivo que sí se le puede enseñar al empleado. Lo que no sea esto es un
+ * fallo nuestro (configuración, red) y se responde en genérico: el SDK del
+ * cliente no traduce nada y el mensaje acabaría tal cual en pantalla.
+ */
+class SubidaRechazada extends Error {}
 
 /**
  * Autoriza la subida DIRECTA de una evidencia del navegador a Vercel Blob.
@@ -31,17 +39,20 @@ export async function POST(req: NextRequest) {
   try {
     const resultado = await handleUpload({
       request: req,
+      // Sin esto el SDK solo leería BLOB_READ_WRITE_TOKEN, y en producción el
+      // token vive bajo el nombre con prefijo personalizado.
+      token: blobToken,
       body: (await req.json()) as HandleUploadBody,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         if (!pathname.startsWith(`evidencias/${userId}/`)) {
-          throw new Error("Ruta de subida no permitida.");
+          throw new SubidaRechazada("Ruta de subida no permitida.");
         }
 
         let categoriaId = "";
         try {
           categoriaId = String(JSON.parse(clientPayload ?? "{}").categoriaId ?? "");
         } catch {
-          throw new Error("Petición mal formada.");
+          throw new SubidaRechazada("Petición mal formada.");
         }
 
         const [categoria, exencion] = await Promise.all([
@@ -51,10 +62,10 @@ export async function POST(req: NextRequest) {
           }),
         ]);
         if (!categoria || !categoria.activa) {
-          throw new Error("La categoría no existe o está inactiva.");
+          throw new SubidaRechazada("La categoría no existe o está inactiva.");
         }
         if (!categoria.requiereEvidencia || exencion) {
-          throw new Error("Esta evidencia no aplica para ti.");
+          throw new SubidaRechazada("Esta evidencia no aplica para ti.");
         }
 
         return {
@@ -68,9 +79,13 @@ export async function POST(req: NextRequest) {
 
     return Response.json(resultado);
   } catch (error) {
+    if (error instanceof SubidaRechazada) {
+      return Response.json({ error: error.message }, { status: 400 });
+    }
+    console.error("Fallo al autorizar la subida de evidencia:", error);
     return Response.json(
-      { error: (error as Error).message || "No se pudo autorizar la subida." },
-      { status: 400 },
+      { error: "No se pudo autorizar la subida. Avisa al administrador." },
+      { status: 500 },
     );
   }
 }
